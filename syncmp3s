@@ -3,13 +3,17 @@
 
 TEST=`mid3v2 -v`
 [[ "${TEST}" == "" ]] && echo "requires mid3v2, install mutagen https://bitbucket.org/lazka/mutagen" && exit 1
-[[ "${WEIGHTING}" == "" ]] && WEIGHTING=64 # no tracks rated less than this
-[[ "${UNWEIGHTING}" == "" ]] && UNWEIGHTING=32 # higher number makes it less likely we'll pick any file
+# WEIGHTING is our minimum rating to consider, no tracks rated less than this
+[[ "${WEIGHTING}" == "" ]] && WEIGHTING=64
+# higher UNWEIGHTING number makes it less likely we'll pick any file, for primitive space management
+[[ "${UNWEIGHTING}" == "" ]] && UNWEIGHTING=32
+[[ "${EXTENSION}" == "" ]] && EXTENSION=mp3
 MIN=`expr 1 + ${WEIGHTING}`
 MAX=`expr 255 + ${UNWEIGHTING}`
 RAND=`jot -r 1 ${MIN} ${MAX} 2> /dev/null` # osx only?
 [[ "${RAND}" == "" ]] && RAND=`shuf -i ${MIN}-${MAX} -n 1 2> /dev/null` # debian only?
 [[ "${RAND}" == "" ]] && echo "requires jot or shuf to generate a random number..." && exit 1
+# If we got 3 params we're considering one file
 if [ $# == 3 ]
 then
   POPM=`mid3v2 "$1" | grep POPM`
@@ -45,9 +49,10 @@ then
   fi
   exit 0
 fi
+# If we got 2 params we're considering a folder
 if [ $# == 2 ]
 then
-  find "$1" -name "*.mp3" -exec $0 {} "$1" "$2" \;
+  find "$1" -name "*.${EXTENSION}" -exec $0 {} "$1" "$2" \;
   exit 0
 fi
 echo "usage $0 [source] [destination]"
