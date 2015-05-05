@@ -1,0 +1,53 @@
+#!/bin/bash
+# Pick a selection of mp3s to sync to my phone
+
+TEST=`mid3v2 -v`
+[[ "${TEST}" == "" ]] && echo "requires mid3v2, install mutagen..." && exit 1
+[[ "${WEIGHTING}" == "" ]] && WEIGHTING=64 # no tracks rated less than this
+[[ "${UNWEIGHTING}" == "" ]] && UNWEIGHTING=32 # higher number makes it less likely we'll pick any file
+MIN=`expr 1 + ${WEIGHTING}`
+MAX=`expr 255 + ${UNWEIGHTING}`
+RAND=`jot -r 1 ${MIN} ${MAX} 2> /dev/null` # osx only?
+[[ "${RAND}" == "" ]] && RAND=`shuf -i ${MIN}-${MAX} -n 1 2> /dev/null` # debian only?
+[[ "${RAND}" == "" ]] && echo "requires jot or shuf to generate a random number..." && exit 1
+if [ $# == 3 ]
+then
+  POPM=`mid3v2 "$1" | grep POPM`
+  RATING=`echo ${POPM} | cut -d' ' -f2 | cut -d/ -f1 | bc`
+  [ "${RATING}" == "" ] && exit 1
+  TAGS=`mid3v2 "$1" | grep TCON`
+  IFS=',' read -a array <<< ${EXCLUDE}
+  for category in ${array[@]}
+  do
+    if [[ "${TAGS}" =~ "$category" ]]
+    then
+      RATING=0
+    fi
+  done
+  if [[ "${INCLUDE}" != "" ]]
+  then
+    ORIGINALRATING=${RATING}
+    RATING=0
+    IFS=',' read -a array <<< ${INCLUDE}
+    for category in ${array[@]}
+    do
+      if [[ "${TAGS}" =~ "$category" ]]
+      then
+        RATING=${ORIGINALRATING}
+      fi
+    done
+  fi
+  if [ ${RAND} -lt ${RATING} ]
+  then
+    cp --parents "$1" "$3" # ${RAND} < ${RATING}
+  else
+    rm "$3$1" 2> /dev/null # ${RAND} > ${RATING}
+  fi
+  exit 0
+fi
+if [ $# == 2 ]
+then
+  find "$1" -name "*.mp3" -exec $0 {} "$1" "$2" \;
+  exit 0
+fi
+echo "usage $0 [source] [destination]"
