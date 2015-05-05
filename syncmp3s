@@ -2,7 +2,7 @@
 # Pick a selection of mp3s to sync to my phone
 
 TEST=`mid3v2 -v`
-[[ "${TEST}" == "" ]] && echo "requires mid3v2, install mutagen..." && exit 1
+[[ "${TEST}" == "" ]] && echo "requires mid3v2, install mutagen https://bitbucket.org/lazka/mutagen" && exit 1
 [[ "${WEIGHTING}" == "" ]] && WEIGHTING=64 # no tracks rated less than this
 [[ "${UNWEIGHTING}" == "" ]] && UNWEIGHTING=32 # higher number makes it less likely we'll pick any file
 MIN=`expr 1 + ${WEIGHTING}`
