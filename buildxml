@@ -1,0 +1,437 @@
+#!/bin/bash
+# build itunes xml
+
+TEST=`mid3v2 -v`
+[[ "${TEST}" == "" ]] && echo "requires mid3v2, install mutagen https://github.com/quodlibet/mutagen" && exit 1
+[[ "${EXTENSION}" == "" ]] && EXTENSION=mp3
+# If we got 3 params we're considering one file
+if [ $# == 3 ]
+then
+  POPM=`mid3v2 "$1" | grep POPM`
+  echo $POPM $RATING $TAGS
+#  IFS=',' read -a array <<< ${EXCLUDE}
+#  for category in ${array[@]}
+#  do
+#    if [[ "${TAGS}" =~ "$category" ]]
+#    then
+#      RATING=0
+#    fi
+#  done
+  exit 0
+fi
+
+# If we got 3 params we're considering a file
+if [ $# == 2 ]
+then
+  MID3=`mid3v2 "$2"`
+  # echo "$MID3" | grep -vE TALB\|TDRC\|TPE1\|TPE2\|TIT1\|TIT2\|TCOM\|TCON\|TRCK
+  TALB=$(echo "$MID3" | grep TALB | cut -c6-)
+  TDRC=$(echo "$MID3" | grep TDRC | cut -c6-)
+  TPE1=$(echo "$MID3" | grep TPE1 | cut -c6-)
+  TPE2=$(echo "$MID3" | grep TPE2 | cut -c6-)
+  TIT1=$(echo "$MID3" | grep TIT1 | cut -c6-)
+  TIT2=$(echo "$MID3" | grep TIT2 | cut -c6-)
+  TCOM=$(echo "$MID3" | grep TCOM | cut -c6-)
+  TCON=$(echo "$MID3" | grep TCON | cut -c6-)
+  TRCK=$(echo "$MID3" | grep TRCK | cut -c6-)
+  TRACKNUMBER=$(echo "${TRCK}" | cut -d/ -f1)
+  TRACKCOUNT=$(echo "${TRCK}" | cut -d/ -f2)
+  SIZE=$(stat -f%z "$2")
+
+  # IDv2 tag info for /Users/paul.clarke/Music/_incoming/Volumes/Music/6/60ft Dolls/Happy Shopper/02 - 60ft Dolls - Everybody's Got Something To Hide (Except Me And My Monkey) (Live).mp3
+  # APIC=other,  (image/png, 230990 bytes)
+  # COMM==XXX=Beatles cover
+  # COMM=iTunNORM=eng= 000015A6 000011AB 000079B5 00004CCD 00001E68 0001F005 0000861F 000083FE 00024314 00020D4E
+  # COMM=iTunSMPB=eng= 00000000 00000210 00000744 00000000008BE72C 00000000 004C14BD 00000000 00000000 00000000 00000000 00000000 00000000
+  # COMM=iTunes_CDDB_IDs=eng=3+A4FDA9503FE6541AB798BBDCE6610090+611780
+  # POPM=no@email=0 196/255
+  # TCOM=Lennon/McCartney
+  # TCON=Indie / Rock / Cover / Live
+  # TENC=iTunes v7.0.2.16
+  # TIT1=4
+  # TIT2=Everybody's Got Something To Hide (Except Me And My Monkey) (Live)
+  # TPE2=60ft Dolls // sort?
+  # TRCK=2/3
+
+  # RATING=`echo ${POPM} | cut -d' ' -f2 | cut -d/ -f1 | bc`
+  # echo rating $RATING
+  # TAGS=`mid3v2 "$2" | grep TCON`
+  # echo tags $TAGS
+  echo "		<key>$1</key>"
+  echo "		<dict>"
+  echo "			<key>Track ID</key><integer>$1</integer>"
+  echo "			<key>Size</key><integer>$SIZE</integer>"
+  # echo "			<key>Total Time</key><integer>197642</integer>"
+  if [ "${TRACKNUMBER}" != "" ]
+  then
+    echo "			<key>Track Number</key><integer>${TRACKNUMBER}</integer>"
+  fi
+  if [ "${TRACKCOUNT}" != "" ]
+  then
+    echo "			<key>Track Count</key><integer>${TRACKCOUNT}</integer>"
+  fi
+  echo "			<key>Year</key><integer>${TDRC}</integer>"
+  echo "			<key>Date Modified</key><date>$(date "+%Y-%m-%dT%H:%M:%SZ")</date>"
+  echo "			<key>Date Added</key><date>$(date "+%Y-%m-%dT%H:%M:%SZ")</date>"
+  # echo "			<key>Bit Rate</key><integer>128</integer>"
+  # echo "			<key>Sample Rate</key><integer>44100</integer>"
+  echo "			<key>Artwork Count</key><integer>1</integer>"
+  # echo "			<key>Persistent ID</key><string>D50ACCA450F5E755</string>"
+  echo "			<key>Track Type</key><string>File</string>"
+  # echo "			<key>File Folder Count</key><integer>8</integer>"
+  # echo "			<key>Library Folder Count</key><integer>1</integer>"
+  echo "			<key>Name</key><string>${TIT2}</string>"
+  echo "			<key>Artist</key><string>${TPE1}</string>"
+  echo "			<key>Album Artist</key><string>${TPE1}</string>"
+  if [ "${TCOM}" != "" ]
+  then
+    echo "			<key>Composer</key><string>${TCOM}</string>"
+  fi
+  echo "			<key>Album</key><string>${TALB}</string>"
+  echo "			<key>Genre</key><string>${TCON// \//}</string>"
+  echo "			<key>Kind</key><string>MPEG audio file</string>"
+  TALB_SORTED=${TALB/The /}
+  if [ "${TALB_SORTED}" != "${TALB}" ]
+  then
+    echo "			<key>Sort Album</key><string>${TALB_SORTED}</string>"
+  fi
+  # echo "			<key>Work</key><string>4</string>"
+  echo "			<key>Location</key><string>file://${2// /%20}</string>"
+  echo "		</dict>"
+fi
+
+# If we got 2 params we're considering a folder
+if [ $# == 1 ]
+then
+  echo '<?xml version="1.0" encoding="UTF-8"?>'
+  echo '<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+  echo '<plist version="1.0">'
+  echo '<dict>'
+  echo '	<key>Major Version</key><integer>1</integer>'
+  echo '	<key>Minor Version</key><integer>1</integer>'
+  echo '	<key>Application Version</key><string>12.9.5.5</string>'
+  echo '	<key>Date</key><date>2020-01-04T19:59:32Z</date>'
+  echo '	<key>Features</key><integer>5</integer>'
+  echo '	<key>Show Content Ratings</key><true/>'
+  echo '	<key>Library Persistent ID</key><string>F6194FA08EEB4583</string>'
+  echo '	<key>Tracks</key>'
+  echo '	<dict>'
+  # echo find "$1" -name "*.${EXTENSION}" -exec "$0" "$1" {} \;
+  find "$1" -name "*.${EXTENSION}" -print0 |
+    while IFS= read -r -d '' file; do
+      i=$(($i + 1))
+      $0 $i "$file"
+    done
+  # find "$1" -name "*.${EXTENSION}" -exec "$0" "$1" {} \;
+  # find "$1" -type d -empty -exec rm -fr "{}" \; 2> /dev/null
+  # find "$1" -type f | wc
+  echo '	</dict>'
+  echo '	<key>Playlists</key>'
+  echo '	<array>'
+  echo '		<dict>'
+  echo '			<key>Master</key><true/>'
+  echo '			<key>Playlist ID</key><integer>80</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>2078D427ABA9F64F</string>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Visible</key><false/>'
+  echo '			<key>Name</key><string>Library</string>'
+  echo '			<key>Playlist Items</key>'
+  echo '			<array>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>76</integer>'
+  echo '				</dict>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>78</integer>'
+  echo '				</dict>'
+  echo '			</array>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>85</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>6708BAE36B22B068</string>'
+  echo '			<key>Distinguished Kind</key><integer>65</integer>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Downloaded</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAQIbEAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAQIbEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIIAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIIAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAhQAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAEQAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAEAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
+  echo '			</data>'
+  echo '			<key>Playlist Items</key>'
+  echo '			<array>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>76</integer>'
+  echo '				</dict>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>78</integer>'
+  echo '				</dict>'
+  echo '			</array>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>90</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>E8DE6C227D57464C</string>'
+  echo '			<key>Distinguished Kind</key><integer>4</integer>'
+  echo '			<key>Music</key><true/>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Music</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAQIbEAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAQIbEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIIAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIIAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAA'
+  echo '			</data>'
+  echo '			<key>Playlist Items</key>'
+  echo '			<array>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>76</integer>'
+  echo '				</dict>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>78</integer>'
+  echo '				</dict>'
+  echo '			</array>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>104</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>B5A100C6504F8ED4</string>'
+  echo '			<key>Distinguished Kind</key><integer>66</integer>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Downloaded</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAAIAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIKAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIKAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAhQAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAEQAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAEAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
+  echo '			</data>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>107</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>463E78894C077BFD</string>'
+  echo '			<key>Distinguished Kind</key><integer>2</integer>'
+  echo '			<key>Movies</key><true/>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Films</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAAIAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIKAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIKAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAA'
+  echo '			</data>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>113</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>FB078454B8164A67</string>'
+  echo '			<key>Distinguished Kind</key><integer>67</integer>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Downloaded</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAEAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIKAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIKAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAhQAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAEQAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAEAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
+  echo '			</data>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>116</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>A4873B9026F7A90D</string>'
+  echo '			<key>Distinguished Kind</key><integer>3</integer>'
+  echo '			<key>TV Shows</key><true/>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>TV Programmes</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAEAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIKAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIKAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAA'
+  echo '			</data>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>119</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>67EA18F76A5E0C6A</string>'
+  echo '			<key>Distinguished Kind</key><integer>10</integer>'
+  echo '			<key>Podcasts</key><true/>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Podcasts</string>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>126</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>53EB91D6C467A80C</string>'
+  echo '			<key>Distinguished Kind</key><integer>5</integer>'
+  echo '			<key>Audiobooks</key><true/>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Audiobooks</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAAgAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AgAEAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAIKAE'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAIKAEAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAA'
+  echo '			</data>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>135</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>5800E41BD2D074BF</string>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Playlist</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEAAwAAAAIAAABkAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAU0xzdAABAAEAAAACAAAAAQAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAADwAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAABEAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAARAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAg'
+  echo '			AAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQRTTHN0AAEAAQAAAAEAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAADQAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAEQAAAAAAAFjdwAAAAAAAAAAAAAAAAAAAAEAAAAAAAFjdwAAAAAAAAAA'
+  echo '			AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
+  echo '			</data>'
+  echo '			<key>Playlist Items</key>'
+  echo '			<array>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>76</integer>'
+  echo '				</dict>'
+  echo '				<dict>'
+  echo '					<key>Track ID</key><integer>78</integer>'
+  echo '				</dict>'
+  echo '			</array>'
+  echo '		</dict>'
+  echo '		<dict>'
+  echo '			<key>Playlist ID</key><integer>140</integer>'
+  echo '			<key>Playlist Persistent ID</key><string>159CC5B84FF93DE0</string>'
+  echo '			<key>All Items</key><true/>'
+  echo '			<key>Name</key><string>Podcasts</string>'
+  echo '			<key>Smart Info</key>'
+  echo '			<data>'
+  echo '			AQEBAwAAABUAAAAFAAEAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAA=='
+  echo '			</data>'
+  echo '			<key>Smart Criteria</key>'
+  echo '			<data>'
+  echo '			U0xzdAABAAEAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEEU0xzdAABAAEAAAABAAAAAQAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAADwAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAABEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAB'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAABBFNMc3QAAQABAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAW'
+  echo '			AAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARAAA'
+  echo '			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAA'
+  echo '			AAAAAAAAAAAAAAAA'
+  echo '			</data>'
+  echo '		</dict>'
+  echo '	</array>'
+  # echo '	<key>Music Folder</key><string>file:///Users/paul.clarke/Music/</string>'
+  echo "	<key>Music Folder</key><string>file://$1/</string>"
+  echo '</dict>'
+  echo '</plist>'
+  exit 0
+fi
+
+# If we got 1 params assume ~/Music
+if [ $# == 0 ]
+then
+  $0 ${HOME}/Music
+  exit 0
+fi
+

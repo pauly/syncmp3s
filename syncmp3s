@@ -2,6 +2,8 @@
 # Pick a selection of mp3s to sync to my phone
 
 TEST=`mid3v2 -v`
+# CP='cp --parents'
+CP=ditto
 [[ "${TEST}" == "" ]] && echo "requires mid3v2, install mutagen https://github.com/quodlibet/mutagen" && exit 1
 # WEIGHTING is our minimum rating to consider, no tracks rated less than this
 [[ "${WEIGHTING}" == "" ]] && WEIGHTING=64
@@ -45,7 +47,7 @@ then
   then
     [[ -f "$3$1" ]] && exit 0
     echo "+ ${1} # ${RAND} < ${RATING} (${MIN}..${MAX})"
-    cp --parents "$1" "$3" # ${RAND} < ${RATING}
+    ${CP} "$1" "$3$1" # ${RAND} < ${RATING}
   else
     [[ -f "$3$1" ]] || exit 0
     rm "$3$1"
