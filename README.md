@@ -22,7 +22,7 @@ This will pick a random number between 0 and 255 and if you track is rated highe
 
 This requires mid3v2 get it by installing [mutagen](https://bitbucket.org/lazka/mutagen)
 
-Initially here [sync android mp3s with linux](http://www.clarkeology.com/m/23386/Sync+a+selection+of+mp3s+to+my+android+phone+with+linux)
+Initially here [sync android mp3s with linux](http://www.clarkeology.com/m/23386)
 
 *NSFK* is my "not safe for kids" tag... this if for syncing music to play in the car, my boys are too young to rage against the machine just yet.
 
